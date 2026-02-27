@@ -54,6 +54,7 @@ export default function Layout({ children, currentPageName }) {
             <span className="font-bold text-slate-800 text-sm">EquipoControl</span>
           </div>
         </div>
+        <NotificationBell userEmail={currentUser?.email} />
       </div>
 
       {/* Sidebar overlay */}
@@ -99,6 +100,11 @@ export default function Layout({ children, currentPageName }) {
             );
           })}
         </nav>
+
+        {/* Notification Bell (desktop) */}
+        <div className="px-3 pb-2 flex justify-end">
+          <NotificationBell userEmail={currentUser?.email} />
+        </div>
 
         {/* User */}
         <div className="p-3 border-t border-slate-100">
