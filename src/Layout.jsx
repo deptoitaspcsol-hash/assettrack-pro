@@ -5,21 +5,24 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  LayoutDashboard, Package, ArrowRightLeft, Laptop, LogOut, Menu, X, ChevronDown, Shield
+  LayoutDashboard, Package, ArrowRightLeft, Laptop, LogOut, Menu, X, ChevronDown, Shield, Ticket
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import NotificationBell from "./components/notifications/NotificationBell";
 
 const adminNav = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
   { name: "Inventario", icon: Package, page: "Inventory" },
   { name: "Asignaciones", icon: ArrowRightLeft, page: "Assignments" },
+  { name: "Tickets de Soporte", icon: Ticket, page: "Tickets" },
 ];
 
 const userNav = [
   { name: "Mi Panel", icon: LayoutDashboard, page: "Dashboard" },
   { name: "Mi Equipo", icon: Laptop, page: "MyEquipment" },
   { name: "Mis Asignaciones", icon: ArrowRightLeft, page: "Assignments" },
+  { name: "Soporte", icon: Ticket, page: "Tickets" },
 ];
 
 export default function Layout({ children, currentPageName }) {
