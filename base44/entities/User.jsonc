@@ -1,0 +1,32 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user",
+      "description": "Rol del usuario"
+    },
+    "department": {
+      "type": "string",
+      "description": "Departamento del usuario"
+    },
+    "position": {
+      "type": "string",
+      "description": "Puesto del usuario"
+    },
+    "is_technician": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica si el usuario es t\u00e9cnico de soporte"
+    }
+  },
+  "required": [
+    "department",
+    "position"
+  ]
+}

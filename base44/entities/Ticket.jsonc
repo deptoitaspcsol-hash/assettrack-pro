@@ -1,0 +1,90 @@
+{
+  "name": "Ticket",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo del ticket"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada del fallo"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "hardware",
+        "software",
+        "red",
+        "periferico",
+        "sistema_operativo",
+        "otro"
+      ],
+      "description": "Categor\u00eda del fallo"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "baja",
+        "media",
+        "alta",
+        "critica"
+      ],
+      "default": "media",
+      "description": "Prioridad del ticket"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "abierto",
+        "en_proceso",
+        "resuelto",
+        "cerrado"
+      ],
+      "default": "abierto",
+      "description": "Estado del ticket"
+    },
+    "equipment_id": {
+      "type": "string",
+      "description": "ID del equipo con fallo"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Nombre del equipo"
+    },
+    "equipment_serial": {
+      "type": "string",
+      "description": "N\u00famero de serie del equipo"
+    },
+    "requester_email": {
+      "type": "string",
+      "description": "Email del usuario que reporta"
+    },
+    "requester_name": {
+      "type": "string",
+      "description": "Nombre del usuario que reporta"
+    },
+    "technician_email": {
+      "type": "string",
+      "description": "Email del t\u00e9cnico asignado"
+    },
+    "technician_name": {
+      "type": "string",
+      "description": "Nombre del t\u00e9cnico asignado"
+    },
+    "resolution_notes": {
+      "type": "string",
+      "description": "Notas de resoluci\u00f3n del t\u00e9cnico"
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de resoluci\u00f3n"
+    }
+  },
+  "required": [
+    "title",
+    "description",
+    "category"
+  ]
+}

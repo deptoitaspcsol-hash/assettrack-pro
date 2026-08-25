@@ -1,0 +1,73 @@
+{
+  "name": "Assignment",
+  "type": "object",
+  "properties": {
+    "equipment_id": {
+      "type": "string",
+      "description": "ID del equipo asignado"
+    },
+    "equipment_name": {
+      "type": "string",
+      "description": "Nombre del equipo"
+    },
+    "equipment_serial": {
+      "type": "string",
+      "description": "N\u00famero de serie del equipo"
+    },
+    "assigned_to_email": {
+      "type": "string",
+      "description": "Email del usuario asignado"
+    },
+    "assigned_to_name": {
+      "type": "string",
+      "description": "Nombre del usuario asignado"
+    },
+    "assignment_type": {
+      "type": "string",
+      "enum": [
+        "asignacion",
+        "salida_temporal",
+        "prestamo"
+      ],
+      "description": "Tipo de movimiento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "activa",
+        "devuelto",
+        "cancelada"
+      ],
+      "default": "activa",
+      "description": "Estado de la asignaci\u00f3n"
+    },
+    "assignment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de asignaci\u00f3n"
+    },
+    "expected_return_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha esperada de devoluci\u00f3n"
+    },
+    "actual_return_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha real de devoluci\u00f3n"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas sobre la asignaci\u00f3n"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Email del admin que aprob\u00f3"
+    }
+  },
+  "required": [
+    "equipment_id",
+    "assigned_to_email",
+    "assignment_type"
+  ]
+}

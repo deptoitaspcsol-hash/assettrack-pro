@@ -1,0 +1,43 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email del destinatario"
+    },
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo de la notificaci\u00f3n"
+    },
+    "message": {
+      "type": "string",
+      "description": "Mensaje de la notificaci\u00f3n"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "nuevo_ticket",
+        "ticket_asignado",
+        "ticket_actualizado",
+        "ticket_resuelto"
+      ],
+      "description": "Tipo de notificaci\u00f3n"
+    },
+    "ticket_id": {
+      "type": "string",
+      "description": "ID del ticket relacionado"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si fue le\u00edda"
+    }
+  },
+  "required": [
+    "user_email",
+    "title",
+    "message",
+    "type"
+  ]
+}

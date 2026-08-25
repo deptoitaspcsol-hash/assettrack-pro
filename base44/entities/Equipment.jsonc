@@ -1,0 +1,90 @@
+{
+  "name": "Equipment",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nombre del equipo"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "laptop",
+        "desktop",
+        "monitor",
+        "teclado",
+        "mouse",
+        "impresora",
+        "telefono",
+        "tablet",
+        "proyector",
+        "otro"
+      ],
+      "description": "Tipo de equipo"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marca del equipo"
+    },
+    "model": {
+      "type": "string",
+      "description": "Modelo del equipo"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "N\u00famero de serie"
+    },
+    "asset_tag": {
+      "type": "string",
+      "description": "Etiqueta de activo"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "disponible",
+        "asignado",
+        "en_reparacion",
+        "dado_de_baja"
+      ],
+      "default": "disponible",
+      "description": "Estado actual del equipo"
+    },
+    "condition": {
+      "type": "string",
+      "enum": [
+        "nuevo",
+        "bueno",
+        "regular",
+        "malo"
+      ],
+      "default": "bueno",
+      "description": "Condici\u00f3n f\u00edsica del equipo"
+    },
+    "purchase_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de compra"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionales"
+    },
+    "assigned_to_email": {
+      "type": "string",
+      "description": "Email del usuario asignado actualmente"
+    },
+    "assigned_to_name": {
+      "type": "string",
+      "description": "Nombre del usuario asignado actualmente"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL de imagen del equipo"
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "serial_number"
+  ]
+}
