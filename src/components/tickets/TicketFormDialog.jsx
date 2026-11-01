@@ -48,9 +48,14 @@ export default function TicketFormDialog({ open, onOpenChange, myEquipment, onSa
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(form);
-    setSaving(false);
-    onOpenChange(false);
+    try {
+      await onSave(form);
+      onOpenChange(false);
+    } catch {
+      // Quien guarda ya muestra el aviso de error; el diálogo queda abierto para reintentar.
+    } finally {
+      setSaving(false);
+    }
   };
 
   const update = (key, val) => setForm(prev => ({ ...prev, [key]: val }));

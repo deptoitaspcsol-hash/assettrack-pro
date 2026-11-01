@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { todayISO } from "@/lib/dates";
 
 export default function AssignmentDialog({ open, onOpenChange, equipment, users, onSave }) {
   const [form, setForm] = useState({
     assigned_to_email: "",
     assignment_type: "asignacion",
-    assignment_date: new Date().toISOString().split("T")[0],
+    assignment_date: todayISO(),
     expected_return_date: "",
     notes: ""
   });
@@ -22,7 +23,7 @@ export default function AssignmentDialog({ open, onOpenChange, equipment, users,
       setForm({
         assigned_to_email: "",
         assignment_type: "asignacion",
-        assignment_date: new Date().toISOString().split("T")[0],
+        assignment_date: todayISO(),
         expected_return_date: "",
         notes: ""
       });
@@ -32,16 +33,21 @@ export default function AssignmentDialog({ open, onOpenChange, equipment, users,
   const handleSave = async () => {
     setSaving(true);
     const selectedUser = users.find(u => u.email === form.assigned_to_email);
-    await onSave({
-      ...form,
-      equipment_id: equipment.id,
-      equipment_name: equipment.name,
-      equipment_serial: equipment.serial_number,
-      assigned_to_name: selectedUser?.full_name || form.assigned_to_email,
-      status: "activa"
-    });
-    setSaving(false);
-    onOpenChange(false);
+    try {
+      await onSave({
+        ...form,
+        equipment_id: equipment.id,
+        equipment_name: equipment.name,
+        equipment_serial: equipment.serial_number,
+        assigned_to_name: selectedUser?.full_name || form.assigned_to_email,
+        status: "activa"
+      });
+      onOpenChange(false);
+    } catch {
+      // Quien guarda ya muestra el aviso de error; el diálogo queda abierto para reintentar.
+    } finally {
+      setSaving(false);
+    }
   };
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));

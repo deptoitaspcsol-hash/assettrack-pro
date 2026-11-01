@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Ticket } from "lucide-react";
 import TicketFormDialog from "../components/tickets/TicketFormDialog";
@@ -12,9 +11,10 @@ import TicketDetailDialog from "../components/tickets/TicketDetailDialog";
 import TicketCard from "../components/tickets/TicketCard";
 import EmptyState from "../components/shared/EmptyState";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function Tickets() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, isAdmin } = useCurrentUser();
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -22,12 +22,6 @@ export default function Tickets() {
   const [statusTab, setStatusTab] = useState("all");
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser);
-  }, []);
-
-  const isAdmin = currentUser?.role === "admin";
 
   const { data: tickets = [] } = useQuery({
     queryKey: ["tickets"],
@@ -41,7 +35,7 @@ export default function Tickets() {
   });
 
   const { data: allEquipment = [] } = useQuery({
-    queryKey: ["equipment"],
+    queryKey: ["equipment", "assigned"],
     queryFn: () => base44.entities.Equipment.filter({ status: "asignado" }),
     enabled: isAdmin,
   });
@@ -55,32 +49,45 @@ export default function Tickets() {
   const technicians = users.filter(u => u.is_technician);
 
   const handleCreateTicket = async (form) => {
-    const ticket = await base44.entities.Ticket.create({
-      ...form,
-      requester_email: currentUser.email,
-      requester_name: currentUser.full_name || currentUser.email,
-      status: "abierto",
-    });
+    let ticket;
+    try {
+      ticket = await base44.entities.Ticket.create({
+        ...form,
+        requester_email: currentUser.email,
+        requester_name: currentUser.full_name || currentUser.email,
+        status: "abierto",
+      });
+    } catch (error) {
+      toast.error("No se pudo crear el ticket. Intenta de nuevo.");
+      throw error; // el diálogo se queda abierto para reintentar
+    }
+    queryClient.invalidateQueries({ queryKey: ["tickets"] });
 
-    // Notify all admins and technicians
-    const recipients = users.filter(u => u.role === "admin" || u.is_technician);
-    await Promise.all(recipients.map(u =>
-      base44.entities.Notification.create({
-        user_email: u.email,
-        title: "🎫 Nuevo Ticket de Soporte",
-        message: `${currentUser.full_name || currentUser.email} reportó: ${form.title} — ${form.equipment_name}`,
-        type: "nuevo_ticket",
-        ticket_id: ticket.id,
-        read: false,
-      })
-    ));
+    // La lista de usuarios solo se carga para administradores (enabled: isAdmin), así que un
+    // usuario normal creaba el ticket sin notificar a nadie. Se consulta aquí cuando hace falta.
+    let recipients = [];
+    try {
+      const allUsers = users.length > 0 ? users : await base44.entities.User.list();
+      recipients = allUsers.filter(u => u.role === "admin" || u.is_technician);
+    } catch {
+      // Sin permiso para listar usuarios: se avisa abajo.
+    }
 
-    // Send email to admins
-    await Promise.all(recipients.map(u =>
-      base44.integrations.Core.SendEmail({
-        to: u.email,
-        subject: `[Ticket #${ticket.id.slice(-6)}] Nuevo ticket: ${form.title}`,
-        body: `
+    // Avisos best-effort: que falle un correo no debe tumbar la creación del ticket.
+    const results = await Promise.allSettled(
+      recipients.flatMap(u => [
+        base44.entities.Notification.create({
+          user_email: u.email,
+          title: "🎫 Nuevo Ticket de Soporte",
+          message: `${currentUser.full_name || currentUser.email} reportó: ${form.title} — ${form.equipment_name}`,
+          type: "nuevo_ticket",
+          ticket_id: ticket.id,
+          read: false,
+        }),
+        base44.integrations.Core.SendEmail({
+          to: u.email,
+          subject: `[Ticket #${ticket.id.slice(-6)}] Nuevo ticket: ${form.title}`,
+          body: `
 Se ha creado un nuevo ticket de soporte.
 
 📋 Título: ${form.title}
@@ -93,46 +100,61 @@ Descripción:
 ${form.description}
 
 Ingresa al sistema para gestionar este ticket.
-        `.trim()
-      })
-    ));
+          `.trim()
+        }),
+      ])
+    );
 
-    queryClient.invalidateQueries({ queryKey: ["tickets"] });
-    toast.success("Ticket creado. Se notificó al equipo técnico.");
+    if (recipients.length === 0) {
+      toast.warning("Ticket creado, pero no se pudo avisar al equipo técnico.");
+    } else if (results.some(r => r.status === "rejected")) {
+      toast.warning("Ticket creado. Algunos avisos al equipo técnico no se pudieron enviar.");
+    } else {
+      toast.success("Ticket creado. Se notificó al equipo técnico.");
+    }
   };
 
   const handleUpdateTicket = async (id, updates, oldTicket) => {
-    await base44.entities.Ticket.update(id, updates);
+    try {
+      await base44.entities.Ticket.update(id, updates);
+    } catch (error) {
+      toast.error("No se pudo actualizar el ticket. Intenta de nuevo.");
+      throw error;
+    }
+    queryClient.invalidateQueries({ queryKey: ["tickets"] });
 
-    // Notify requester of status change
+    const pending = [];
+
+    // Avisar al solicitante si cambió el estado
     if (updates.status !== oldTicket.status) {
       const statusLabels = { en_proceso: "En Proceso", resuelto: "Resuelto", cerrado: "Cerrado" };
       if (statusLabels[updates.status]) {
-        await base44.entities.Notification.create({
+        pending.push(base44.entities.Notification.create({
           user_email: oldTicket.requester_email,
           title: `Ticket ${statusLabels[updates.status]}`,
           message: `Tu ticket "${oldTicket.title}" fue marcado como ${statusLabels[updates.status].toLowerCase()}.`,
-          type: "ticket_actualizado",
+          type: updates.status === "resuelto" ? "ticket_resuelto" : "ticket_actualizado",
           ticket_id: id,
           read: false,
-        });
+        }));
       }
     }
 
-    // Notify new technician if assigned
-    if (updates.technician_email && updates.technician_email !== oldTicket.technician_email && updates.technician_email !== "none") {
-      await base44.entities.Notification.create({
-        user_email: updates.technician_email,
-        title: "👷 Ticket asignado a ti",
-        message: `Se te asignó el ticket: "${oldTicket.title}" — ${oldTicket.equipment_name}`,
-        type: "ticket_asignado",
-        ticket_id: id,
-        read: false,
-      });
-      await base44.integrations.Core.SendEmail({
-        to: updates.technician_email,
-        subject: `[Ticket Asignado] ${oldTicket.title}`,
-        body: `
+    // Avisar al técnico recién asignado
+    if (updates.technician_email && updates.technician_email !== oldTicket.technician_email) {
+      pending.push(
+        base44.entities.Notification.create({
+          user_email: updates.technician_email,
+          title: "👷 Ticket asignado a ti",
+          message: `Se te asignó el ticket: "${oldTicket.title}" — ${oldTicket.equipment_name}`,
+          type: "ticket_asignado",
+          ticket_id: id,
+          read: false,
+        }),
+        base44.integrations.Core.SendEmail({
+          to: updates.technician_email,
+          subject: `[Ticket Asignado] ${oldTicket.title}`,
+          body: `
 Se te ha asignado un ticket de soporte.
 
 📋 Título: ${oldTicket.title}
@@ -144,12 +166,17 @@ Descripción:
 ${oldTicket.description}
 
 Ingresa al sistema para atender este ticket.
-        `.trim()
-      });
+          `.trim()
+        })
+      );
     }
 
-    queryClient.invalidateQueries({ queryKey: ["tickets"] });
-    toast.success("Ticket actualizado");
+    const results = await Promise.allSettled(pending);
+    if (results.some(r => r.status === "rejected")) {
+      toast.warning("Ticket actualizado. Algunos avisos no se pudieron enviar.");
+    } else {
+      toast.success("Ticket actualizado");
+    }
   };
 
   const visibleTickets = tickets.filter(t => {
