@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -9,10 +9,16 @@ import { Plus, Search, Filter } from "lucide-react";
 import EquipmentTable from "../components/equipment/EquipmentTable";
 import EquipmentFormDialog from "../components/equipment/EquipmentFormDialog";
 import AssignmentDialog from "../components/equipment/AssignmentDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { todayISO } from "@/lib/dates";
 
 export default function Inventory() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const { isAdmin } = useCurrentUser();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -20,14 +26,9 @@ export default function Inventory() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [assigningEquipment, setAssigningEquipment] = useState(null);
+  const [deletingEquipment, setDeletingEquipment] = useState(null);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser);
-  }, []);
-
-  const isAdmin = currentUser?.role === "admin";
 
   const { data: equipment = [], isLoading } = useQuery({
     queryKey: ["equipment"],
@@ -46,6 +47,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: ["equipment"] });
       toast.success("Equipo registrado");
     },
+    onError: () => toast.error("No se pudo registrar el equipo. Intenta de nuevo."),
   });
 
   const updateMutation = useMutation({
@@ -54,6 +56,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: ["equipment"] });
       toast.success("Equipo actualizado");
     },
+    onError: () => toast.error("No se pudo actualizar el equipo. Intenta de nuevo."),
   });
 
   const deleteMutation = useMutation({
@@ -62,6 +65,7 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: ["equipment"] });
       toast.success("Equipo eliminado");
     },
+    onError: () => toast.error("No se pudo eliminar el equipo. Intenta de nuevo."),
   });
 
   const assignMutation = useMutation({
@@ -78,27 +82,46 @@ export default function Inventory() {
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       toast.success("Equipo asignado correctamente");
     },
+    onError: () => toast.error("No se pudo asignar el equipo. Intenta de nuevo."),
   });
 
   const handleReturn = async (eq) => {
-    const activeAssignments = await base44.entities.Assignment.filter({
-      equipment_id: eq.id,
-      status: "activa"
-    });
-    for (const a of activeAssignments) {
-      await base44.entities.Assignment.update(a.id, {
-        status: "devuelto",
-        actual_return_date: new Date().toISOString().split("T")[0],
+    try {
+      const activeAssignments = await base44.entities.Assignment.filter({
+        equipment_id: eq.id,
+        status: "activa"
       });
+      for (const a of activeAssignments) {
+        await base44.entities.Assignment.update(a.id, {
+          status: "devuelto",
+          actual_return_date: todayISO(), // fecha local, no UTC
+        });
+      }
+      await base44.entities.Equipment.update(eq.id, {
+        status: "disponible",
+        assigned_to_email: "",
+        assigned_to_name: "",
+      });
+      toast.success("Equipo devuelto");
+    } catch {
+      toast.error("No se pudo registrar la devolución. Intenta de nuevo.");
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ["equipment"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
     }
-    await base44.entities.Equipment.update(eq.id, {
-      status: "disponible",
-      assigned_to_email: "",
-      assigned_to_name: "",
-    });
-    queryClient.invalidateQueries({ queryKey: ["equipment"] });
-    queryClient.invalidateQueries({ queryKey: ["assignments"] });
-    toast.success("Equipo devuelto");
+  };
+
+  const requestDelete = (eq) => {
+    if (eq.status === "asignado") {
+      toast.error("Este equipo está asignado. Regístralo como devuelto antes de eliminarlo.");
+      return;
+    }
+    setDeletingEquipment(eq);
+  };
+
+  const confirmDelete = () => {
+    if (deletingEquipment) deleteMutation.mutate(deletingEquipment.id);
+    setDeletingEquipment(null);
   };
 
   const handleSaveEquipment = async (data) => {
@@ -189,7 +212,7 @@ export default function Inventory() {
           onEdit={eq => { setEditingEquipment(eq); setFormOpen(true); }}
           onAssign={eq => { setAssigningEquipment(eq); setAssignOpen(true); }}
           onReturn={handleReturn}
-          onDelete={eq => deleteMutation.mutate(eq.id)}
+          onDelete={requestDelete}
         />
       </Card>
 
@@ -199,6 +222,24 @@ export default function Inventory() {
         equipment={editingEquipment}
         onSave={handleSaveEquipment}
       />
+
+      <AlertDialog open={!!deletingEquipment} onOpenChange={(open) => { if (!open) setDeletingEquipment(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este equipo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará {deletingEquipment?.name} ({deletingEquipment?.serial_number}) del inventario.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {assigningEquipment && (
         <AssignmentDialog

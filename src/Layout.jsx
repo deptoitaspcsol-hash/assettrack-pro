@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
@@ -10,6 +10,9 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import NotificationBell from "./components/notifications/NotificationBell";
+import InstallAppButton from "./components/pwa/InstallAppButton";
+import OfflineBanner from "./components/pwa/OfflineBanner";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 const adminNav = [
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
@@ -26,25 +29,26 @@ const userNav = [
 ];
 
 export default function Layout({ children, currentPageName }) {
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, isAdmin } = useCurrentUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
-  }, []);
-
-  const isAdmin = currentUser?.role === "admin";
   const nav = isAdmin ? adminNav : userNav;
   const initials = currentUser?.full_name
     ? currentUser.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
     : "U";
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-dvh bg-slate-50/50">
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 px-4 h-14 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 px-4 h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
           <div className="flex items-center gap-2">
@@ -64,7 +68,7 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-slate-200 transition-transform duration-300 ease-in-out flex flex-col",
+        "fixed top-0 left-0 z-40 h-dvh w-64 bg-white border-r border-slate-200 transition-transform duration-300 ease-in-out flex flex-col",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         {/* Logo */}
@@ -79,13 +83,14 @@ export default function Layout({ children, currentPageName }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {nav.map(item => {
             const isActive = currentPageName === item.page;
             return (
               <Link
                 key={item.page}
                 to={createPageUrl(item.page)}
+                aria-current={isActive ? "page" : undefined}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
@@ -101,13 +106,16 @@ export default function Layout({ children, currentPageName }) {
           })}
         </nav>
 
+        {/* Instalar como app (solo aparece si aún no está instalada) */}
+        <InstallAppButton className="mx-3 mb-2 w-[calc(100%-1.5rem)]" />
+
         {/* Notification Bell (desktop) */}
         <div className="px-3 pb-2 flex justify-end">
           <NotificationBell userEmail={currentUser?.email} />
         </div>
 
         {/* User */}
-        <div className="p-3 border-t border-slate-100">
+        <div className="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] border-t border-slate-100">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">
@@ -138,11 +146,13 @@ export default function Layout({ children, currentPageName }) {
       </aside>
 
       {/* Main content */}
-      <main className="lg:ml-64 pt-14 lg:pt-0">
+      <main className="lg:ml-64 pt-[calc(3.5rem+env(safe-area-inset-top))] lg:pt-0">
         <div className="p-4 md:p-6 lg:p-8 max-w-7xl">
           {children}
         </div>
       </main>
+
+      <OfflineBanner />
     </div>
   );
 }

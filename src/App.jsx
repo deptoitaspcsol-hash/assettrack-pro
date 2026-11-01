@@ -1,4 +1,6 @@
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
+import PWAManager from "@/components/pwa/PWAManager"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
@@ -72,6 +74,9 @@ function App() {
           <AuthenticatedApp />
         </Router>
         <Toaster />
+        {/* Los avisos de Inventario, Tickets y de la PWA usan "sonner", que no estaba montado: nunca se veían. */}
+        <SonnerToaster richColors position="top-center" />
+        <PWAManager />
       </QueryClientProvider>
     </AuthProvider>
   )

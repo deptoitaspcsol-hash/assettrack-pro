@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Laptop, Monitor, Printer, Smartphone, Tablet, Mouse, Keyboard, Video, HardDrive, Calendar, Hash } from "lucide-react";
 import StatusBadge from "../components/shared/StatusBadge";
 import EmptyState from "../components/shared/EmptyState";
-import { format } from "date-fns";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { formatDate } from "@/lib/dates";
 
 const typeIcons = {
   laptop: Laptop, desktop: HardDrive, monitor: Monitor, teclado: Keyboard,
@@ -14,11 +15,7 @@ const typeIcons = {
 };
 
 export default function MyEquipment() {
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser);
-  }, []);
+  const { currentUser } = useCurrentUser();
 
   const { data: equipment = [] } = useQuery({
     queryKey: ["my-equipment", currentUser?.email],
@@ -79,12 +76,12 @@ export default function MyEquipment() {
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <span className="text-xs">
-                          Desde {assignment.assignment_date ? format(new Date(assignment.assignment_date), "dd/MM/yyyy") : "—"}
+                          Desde {formatDate(assignment.assignment_date)}
                         </span>
                       </div>
                       {assignment.expected_return_date && (
                         <p className="text-xs text-slate-400">
-                          Devolución esperada: {format(new Date(assignment.expected_return_date), "dd/MM/yyyy")}
+                          Devolución esperada: {formatDate(assignment.expected_return_date)}
                         </p>
                       )}
                     </>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Bell, BellDot, Check, CheckCheck } from "lucide-react";
+import { Bell, BellDot, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -32,6 +32,16 @@ export default function NotificationBell({ userEmail }) {
 
   const unread = notifications.filter(n => !n.read).length;
 
+  // PWA instalada: muestra el número de avisos sin leer sobre el icono de la app (si el sistema lo permite).
+  useEffect(() => {
+    if (!("setAppBadge" in navigator)) return;
+    if (unread > 0) {
+      navigator.setAppBadge(unread).catch(() => {});
+    } else {
+      navigator.clearAppBadge?.().catch(() => {});
+    }
+  }, [unread]);
+
   const markAsRead = async (notif) => {
     if (notif.read) return;
     await base44.entities.Notification.update(notif.id, { read: true });
@@ -54,7 +64,12 @@ export default function NotificationBell({ userEmail }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative h-9 w-9"
+          aria-label={unread > 0 ? `Notificaciones, ${unread} sin leer` : "Notificaciones"}
+        >
           {unread > 0 ? (
             <>
               <BellDot className="w-5 h-5 text-slate-600" />

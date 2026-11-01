@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Monitor, Calendar, User, Wrench } from "lucide-react";
 import StatusBadge from "../shared/StatusBadge";
 import { format } from "date-fns";
+import { todayISO } from "@/lib/dates";
 
 export default function TicketDetailDialog({ open, onOpenChange, ticket, isAdmin, technicians, onUpdate }) {
   const [techEmail, setTechEmail] = useState(ticket?.technician_email || "");
@@ -27,19 +28,26 @@ export default function TicketDetailDialog({ open, onOpenChange, ticket, isAdmin
 
   const handleSave = async () => {
     setSaving(true);
-    const selectedTech = technicians.find(t => t.email === techEmail);
+    // "none" es el valor de "Sin asignar" en el selector; no debe guardarse como técnico.
+    const assignedEmail = techEmail === "none" ? "" : techEmail;
+    const selectedTech = technicians.find(t => t.email === assignedEmail);
     const updates = {
       status,
       resolution_notes: resolution,
-      technician_email: techEmail,
-      technician_name: selectedTech?.full_name || techEmail,
+      technician_email: assignedEmail,
+      technician_name: assignedEmail ? (selectedTech?.full_name || assignedEmail) : "",
     };
     if (status === "resuelto" && !ticket.resolved_date) {
-      updates.resolved_date = new Date().toISOString().split("T")[0];
+      updates.resolved_date = todayISO(); // fecha local, no UTC
     }
-    await onUpdate(ticket.id, updates, ticket);
-    setSaving(false);
-    onOpenChange(false);
+    try {
+      await onUpdate(ticket.id, updates, ticket);
+      onOpenChange(false);
+    } catch {
+      // Quien guarda ya muestra el aviso de error; el diálogo queda abierto para reintentar.
+    } finally {
+      setSaving(false);
+    }
   };
 
   const priorityColors = {

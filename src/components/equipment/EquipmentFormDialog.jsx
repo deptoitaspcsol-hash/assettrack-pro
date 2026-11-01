@@ -46,9 +46,14 @@ export default function EquipmentFormDialog({ open, onOpenChange, equipment, onS
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(form);
-    setSaving(false);
-    onOpenChange(false);
+    try {
+      await onSave(form);
+      onOpenChange(false);
+    } catch {
+      // Quien guarda ya muestra el aviso de error; el diálogo queda abierto para reintentar.
+    } finally {
+      setSaving(false);
+    }
   };
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));

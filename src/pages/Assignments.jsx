@@ -1,26 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, ArrowRightLeft, Filter } from "lucide-react";
 import StatusBadge from "../components/shared/StatusBadge";
 import EmptyState from "../components/shared/EmptyState";
-import { format } from "date-fns";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { formatDate } from "@/lib/dates";
 
 export default function Assignments() {
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, isAdmin } = useCurrentUser();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-
-  useEffect(() => {
-    base44.auth.me().then(setCurrentUser);
-  }, []);
-
-  const isAdmin = currentUser?.role === "admin";
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["assignments"],
@@ -37,11 +32,6 @@ export default function Assignments() {
     const matchUser = isAdmin || a.assigned_to_email === currentUser?.email;
     return matchSearch && matchStatus && matchType && matchUser;
   });
-
-  const formatDate = (d) => {
-    if (!d) return "—";
-    return format(new Date(d), "dd/MM/yyyy");
-  };
 
   return (
     <div className="space-y-5">
